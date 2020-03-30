@@ -6,7 +6,7 @@
 
 - [x] http协议理解
 - [x] 了解http2
-- [ ] socket编程
+- [x] socket编程
 
 
 
@@ -14,20 +14,9 @@
 
 ## TCP协议
 
-### tcp的作用
+### 7层网络模型
 
-![1579181820928](assets/1579181820928.png)
-
-![1579182317590](assets/1579182317590.png)
-
-如何选择传输路径是由ip层及以下的链路层决定
-
-如何构造一个请求或响应消息是由应用层决定的
-
-如何可靠的传输保证顺序有tcp层决定的
-
-• TCP：面向连接的、可靠的、基于字节流的传输层通信协议
-• IP：根据IP地址穿越网络传送数据
+![img](assets/20170328082725339.jfif)
 
 ### TCP 协议特点
 
@@ -102,7 +91,191 @@
 
 
 
+## socket编程
 
+socket 主要api
+
+1. socket()
+2. bind()
+3. listen()
+4. accept()
+5. connect()
+6. connect_ex()
+7. send()
+8. recv()
+9. close()
+
+
+
+### 简单c/s通信
+
+```python
+# server
+
+import socket
+
+HOST = '127.0.0.1'
+PORT = 3456
+
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    s.bind((HOST, PORT))
+    s.listen(10)
+    conn, addr = s.accept()
+    with conn:
+        print('Connected by', addr)
+        while True:
+            data = conn.recv(1024)
+            if not data:
+                break
+            conn.sendall(data)
+```
+
+```python
+# client
+
+import socket
+
+HOST = '127.0.0.1'  
+PORT = 3456       
+
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    s.connect((HOST, PORT))
+    s.sendall(b'Hello, world')
+    data = s.recv(1024)
+
+print('Received', repr(data))
+```
+
+
+
+### 多用户服务端
+
+#### 线程版
+
+```python
+import socket
+import threading
+
+HOST = '127.0.0.1'
+PORT = 3456
+
+
+def handler_conn(conn, addr):
+    print('connected by ', addr)
+    with conn:
+        while True:
+            data = conn.recv(1024)
+            if not data:
+                break
+            conn.sendall(data)
+
+
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    s.bind((HOST, PORT))
+    s.listen(10)
+    while True:
+        conn, addr = s.accept()
+        # 开个新的线程去处理连接
+        thread = threading.Thread(target=handler_conn, args=(conn, addr))
+        thread.start()
+```
+
+
+
+### select版
+
+```python
+import socket
+import selectors
+import types
+
+sel = selectors.DefaultSelector()
+
+
+def accept_wrapper(sock):
+    conn, addr = sock.accept()  # Should be ready to read
+    print("accepted connection from", addr)
+    conn.setblocking(False)
+    data = types.SimpleNamespace(addr=addr, inb=b"", outb=b"")
+    events = selectors.EVENT_READ | selectors.EVENT_WRITE
+    sel.register(conn, events, data=data)
+
+
+def service_connection(key, mask):
+    sock = key.fileobj
+    data = key.data
+    if mask & selectors.EVENT_READ:
+        recv_data = sock.recv(1024)  # Should be ready to read
+        if recv_data:
+            data.outb += recv_data
+        else:
+            print("closing connection to", data.addr)
+            sel.unregister(sock)
+            sock.close()
+    if mask & selectors.EVENT_WRITE:
+        if data.outb:
+            print("echoing", repr(data.outb), "to", data.addr)
+            sent = sock.send(data.outb)  # Should be ready to write
+            data.outb = data.outb[sent:]
+
+
+
+
+host, port = '127.0.0.1', 3456
+lsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+lsock.bind((host, port))
+lsock.listen(10)
+print("listening on", (host, port))
+lsock.setblocking(False)
+sel.register(lsock, selectors.EVENT_READ, data=None)
+
+try:
+    while True:
+        events = sel.select(timeout=None)
+        for key, mask in events:
+            if key.data is None:
+                accept_wrapper(key.fileobj)
+            else:
+                service_connection(key, mask)
+except KeyboardInterrupt:
+    print("caught keyboard interrupt, exiting")
+finally:
+    sel.close()
+```
+
+
+
+### asyncio版
+
+```python
+import asyncio
+
+async def handle_echo(reader, writer):
+    data = await reader.read(100)
+    message = data.decode()
+    addr = writer.get_extra_info('peername')
+
+    print(f"Received {message!r} from {addr!r}")
+
+    print(f"Send: {message!r}")
+    writer.write(data)
+    await writer.drain()
+
+    print("Close the connection")
+    writer.close()
+
+async def main():
+    server = await asyncio.start_server(
+        handle_echo, '127.0.0.1', 3456)
+
+    addr = server.sockets[0].getsockname()
+    print(f'Serving on {addr}')
+
+    async with server:
+        await server.serve_forever()
+
+asyncio.run(main())
+```
 
 
 
@@ -216,8 +389,6 @@ HTTP Range
 - 数据流以消息的形式发送，而消息又由一个或多个帧组成，多个帧之间可以乱序发送，因为根据帧首部的流标识可以重新组装。
 
 
-
-## socket编程
 
 
 
