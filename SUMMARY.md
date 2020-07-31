@@ -8,4 +8,6 @@
 
 * [设计原则](编码的艺术/设计原则.md)
 
+* [ansible](ansible/ansible笔记.md)
+
   
