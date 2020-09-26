@@ -97,4 +97,51 @@ ansible pattern -m module -a argument
     略
     ```
 
-12. 
+
+## 变量
+
+1. 全局变量
+2. 剧本变量
+3. 资产变量
+4. facts变量
+
+## 任务控制
+
+### 条件判断	when
+
+### 循环 	with_items  	or    loop
+
+### 选择执行 	tags
+
+### 触发器 	notify	handlers
+
+
+
+## jinja2模板
+
+略
+
+## roles
+
+### 结构
+
+```shell
+role/
+├── defaults
+│   └── main.yml
+├── files
+├── handlers
+│   └── main.yml
+├── meta
+│   └── main.yml
+├── tasks
+│   └── main.yml
+├── templates
+└── vars
+    └── main.yml
+```
+
+
+
+
+
