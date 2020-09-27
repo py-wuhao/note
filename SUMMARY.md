@@ -10,4 +10,6 @@
 
 * [ansible](ansible/ansible笔记.md)
 
+* [生活](生活/生活.md)
+
   
