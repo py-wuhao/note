@@ -2,7 +2,21 @@
 
 ## ansible安装
 
-略
+```shell
+yum install ansible
+
+vim /etc/ansible/ansible.cfg
+# 关闭 host_key 验证
+host_key_checking = False
+
+# 启用log日志
+log_path = /var/log/ansible.log
+# 修改默认模块
+ module_name = shell
+
+```
+
+
 
 ## 建立ssh信任关系
 
